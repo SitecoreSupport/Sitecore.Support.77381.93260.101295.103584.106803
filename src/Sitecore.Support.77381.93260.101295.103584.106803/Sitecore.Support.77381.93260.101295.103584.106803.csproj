@@ -74,6 +74,7 @@
     <Compile Include="ExperienceEditor\Speak\Ribbon\Requests\SaveItem\CallServerSavePipeline.cs" />
     <Compile Include="ExperienceEditor\Speak\Server\Contexts\PageContext.cs" />
     <Compile Include="ExperienceEditor\Utils\WebUtility.cs" />
+    <Compile Include="Pipelines\RenderField\GetMemoFieldValue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shell\Applications\ContentManager\ReturnFieldEditorValues\SetValues.cs" />
   </ItemGroup>

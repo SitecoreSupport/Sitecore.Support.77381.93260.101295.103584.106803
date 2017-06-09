@@ -222,25 +222,18 @@
                 this.chrome.element.html(text.replace(new RegExp("\\\n", 'g'), " "));
             } else if (this.fieldType == "multi-line text") {
                 if (text.indexOf("\\\n\\\n") == 0) {
+                    this.fieldValue.val(html.replace(/<br>/g, "\r\n"));
                     text.replace("\\\n\\\n", "");
                 }
                 this.fieldValue.val(text.replace(new RegExp("\\\n\\\n", 'g'), "<br><br>").replace(new RegExp("\\\n", 'g'), " ").replace(/(^<br><br>|<br><br>$)/g, ""));
                 this.chrome.element.html(text.replace(new RegExp("\\\n\\\n", 'g'), "<br><br>").replace(new RegExp("\\\n", 'g'), " ").replace(/(^<br><br>|<br><br>$)/g, ""));
             }
             else {
-                //Sitecore.Support.77381.93260.101295.103584.106803
-                // this.fieldValue.val(html);
-                if (this.fieldType == "multi-line text") {
-                    this.fieldValue.val(html.replace(/<br>/g, "\r\n"));
-                } else {
-                    this.fieldValue.val(html);
-                }
+                this.fieldValue.val(html);
             }
             this.isPasted = false;
         }
         else {
-            //Sitecore.Support.77381.93260.101295.103584.106803
-            // this.fieldValue.val(html);
             if (this.fieldType == "multi-line text") {
                 this.fieldValue.val(html.replace(/<br>/g, "\r\n"));
             } else {
