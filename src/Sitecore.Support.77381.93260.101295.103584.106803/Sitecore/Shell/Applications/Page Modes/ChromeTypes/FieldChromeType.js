@@ -4,8 +4,9 @@
         //Key codes which aren't tracked as ones that modify contenteditable fields
         this._ignoreKeyCodes = [16, 17, 18, 27, 35, 36, 37, 38, 39, 40];
         this.isPasted = false;
+        
     },
-
+   
     load: function () {
         var persistedValue = Sitecore.PageModes.ChromeManager.getFieldValueContainerById(this.controlId());
         var fieldValueInput = this.chrome.element.prev().prev(".scFieldValue");
@@ -100,19 +101,24 @@
         this.chrome.fieldIdentifier = this.id();
 
         // attach new line breaks handler.
-        if (this.fieldType == "rich text") {
-            if (!this.preventLineBreak()) {
-                Sitecore.PageModes.InlineEditingUtil.processNewLineBreaks(this.chrome.element[0]);
-            }
+        // Sitecore.Support.103584
+        if ((this.fieldType != "rich text" && this.fieldType != "multi-line text") || this.preventLineBreak()) {
+            this.chrome.element.bind("keydown", this.onKeyDownHandler);
         }
     },
 
     // attaches content editable elements specific event handlers
     attachEventHandlers: function () {
         this.chrome.element.bind("keyup", this.onKeyUpHandler);
-        this.chrome.element.bind("paste", this.onCutPasteHandler);
+        this.chrome.element.unbind("paste");
+        
+        if (this.fieldType != "rich text")
+            this.chrome.element.bind("paste", this.onPasteNoHtml);
+        else
+            this.chrome.element.bind("paste", this.onCutPasteHandler);
         this.chrome.element.bind("cut", this.onCutPasteHandler);
         this.chrome.element.bind("click", this.onClickHandler);
+        this.chrome.element.unbind("blur");
         this.chrome.element.bind("blur", this.onBlurHandler);
 
         // //Sitecore.Support.77381.93260.101295.103584.106803
@@ -134,6 +140,8 @@
     detachEventHandlers: function () {
         this.chrome.element.unbind("keyup", this.onKeyUpHandler);
         this.chrome.element.unbind("paste", this.onCutPasteHandler);
+        if (this.fieldType != "rich text")
+            this.chrome.element.unbind("paste", this.onPasteNoHtml);
         this.chrome.element.unbind("cut", this.onCutPasteHandler);
         this.chrome.element.unbind("click", this.onClickHandler);
         this.chrome.element.unbind("blur", this.onBlurHandler);
@@ -210,19 +218,20 @@
             var clone = this.chrome.element.clone();
             clone.find(".scExtraBreak").remove();
             html = clone.html();
+            this.chrome.element.html(html);
         }
 
         if (this.watermarkHTML == null) {
             this.watermarkHTML = this.chrome.element.attr("scDefaultText");
         }
-        //Sitecore.Support.77381.93260.101295.103584.106803
+               //Sitecore.Support.77381.93260.101295.103584.106803
         if (this.isPasted) {
             if (this.fieldType == "text" || this.fieldType == "single-line text") {
                 this.fieldValue.val(text.replace(new RegExp("\\\n", 'g'), " "));
                 this.chrome.element.html(text.replace(new RegExp("\\\n", 'g'), " "));
             } else if (this.fieldType == "multi-line text") {
+				this.fieldValue.val(html.replace(/<br>/g, "\r\n"));
                 if (text.indexOf("\\\n\\\n") == 0) {
-                    this.fieldValue.val(html.replace(/<br>/g, "\r\n"));
                     text.replace("\\\n\\\n", "");
                 }
                 this.fieldValue.val(text.replace(new RegExp("\\\n\\\n", 'g'), "<br><br>").replace(new RegExp("\\\n", 'g'), " ").replace(/(^<br><br>|<br><br>$)/g, ""));
@@ -240,6 +249,7 @@
                 this.fieldValue.val(html);
             }
         }
+		//end of Sitecore.Support.77381.93260.101295.103584.106803
         this.chrome.element.removeAttr("scWatermark");
     },
 
@@ -539,6 +549,51 @@
         this.setModified();
     },
 
+    onPasteNoHtml: function(e) {
+    // setTimeout(function () {
+        e.preventDefault();
+        var content;
+        if (e.clipboardData || e.originalEvent.clipboardData) {
+            content = (e.originalEvent || e).clipboardData.getData('text/plain');
+
+            document.execCommand('insertText', false, content);
+        } else if (window.clipboardData) {
+           
+                content = window.clipboardData.getData('Text');
+                if (!document.selection)
+                // document.getSelection().pasteHTML(content);
+                {
+                    var sel = window.getSelection();
+                    if (sel.getRangeAt && sel.rangeCount) {
+                        var range = sel.getRangeAt(0);
+                        range.deleteContents();
+
+                        // Range.createContextualFragment() would be useful here but is
+                        // only relatively recently standardized and is not supported in
+                        // some browsers (IE9, for one)
+                        var el = document.createElement("div");
+                        el.innerHTML = content.replace(/\n/g,"<br>");
+                        var frag = document.createDocumentFragment(), node, lastNode;
+                        while ((node = el.firstChild)) {
+                            lastNode = frag.appendChild(node);
+                        }
+                        range.insertNode(frag);
+
+                        // Preserve the selection
+                        if (lastNode) {
+                            range = range.cloneRange();
+                            range.setStartAfter(lastNode);
+                            range.collapse(true);
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                        }
+                    } else
+                        document.selection.createRange().pasteHTML(content);
+                }
+            
+            }
+       //     }, 100);
+    },
     onDelete: function () {
         if (this.saveHandler) {
             Sitecore.PageModes.PageEditor.onSave.stopObserving(this.saveHandler);
@@ -559,6 +614,7 @@
     },
 
     onKeyDown: function (e) {
+       
         if (!this.active) {
             e.preventDefault();
             return;
@@ -575,12 +631,11 @@
                 if (this.fieldType == "multi-line text") {
                     var linebreakTimesParamterName = "linebreak-times";
                     var linebreakTimesParamter = this.parameters[linebreakTimesParamterName];
-                    var linebreakTimes = !linebreakTimesParamter || linebreakTimesParamter > 2 ? 0 : linebreakTimesParamter;
+                    var linebreakTimes = !linebreakTimesParamter || linebreakTimesParamter > 4 ? 0 : linebreakTimesParamter;
                     linebreakTimes++;
                     this.parameters[linebreakTimesParamterName] = linebreakTimes;
-                    if (linebreakTimes > 1) {
+                    if (linebreakTimes > 1) 
                         return;
-                    }
                 }
 
                 this._insertLineBreak();
@@ -691,7 +746,7 @@
     },
 
     _insertLineBreak: function () {
-        var range, tmpRange, lineBreak, extraLineBreak, selection;
+       var range, tmpRange, lineBreak, extraLineBreak, selection;
 
         // Unsupported browser
         if (!document.createRange || !window.getSelection) {
@@ -717,7 +772,7 @@
         // Adding 2 <br/> tags in case of pressing 'enter' while cursor is in the last position.
         // This trick forces cursor to move to the new line
         if (!tmpRange.toString() && !this.chrome.element.find(".scExtraBreak").length) {
-            var extraLineBreak = document.createElement("br");
+            extraLineBreak = document.createElement("br");
             extraLineBreak.className = "scExtraBreak";
             range.insertNode(extraLineBreak);
             this._extraLineBreakAdded = true;
@@ -731,6 +786,8 @@
         selection = window.getSelection();
         selection.removeAllRanges();
         selection.addRange(tmpRange);
+
+
     },
 
     _processHtml: function (html) {
