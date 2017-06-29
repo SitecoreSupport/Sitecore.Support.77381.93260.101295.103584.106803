@@ -105,6 +105,7 @@
         if ((this.fieldType != "rich text" && this.fieldType != "multi-line text") || this.preventLineBreak()) {
             this.chrome.element.bind("keydown", this.onKeyDownHandler);
         }
+		//end of Sitecore.Support.103584
     },
 
     // attaches content editable elements specific event handlers
@@ -121,10 +122,11 @@
         this.chrome.element.unbind("blur");
         this.chrome.element.bind("blur", this.onBlurHandler);
 
-        // //Sitecore.Support.77381.93260.101295.103584.106803
+        // Sitecore.Support.77381.93260.101295.103584.106803
         if ((this.fieldType != "rich text" && this.fieldType != "multi-line text") || this.preventLineBreak()) {
             this.chrome.element.bind("keydown", this.onKeyDownHandler);
         }
+		//end of Sitecore.Support.77381.93260.101295.103584.106803
     },
 
     preventLineBreak: function () {
@@ -224,7 +226,7 @@
         if (this.watermarkHTML == null) {
             this.watermarkHTML = this.chrome.element.attr("scDefaultText");
         }
-               //Sitecore.Support.77381.93260.101295.103584.106803
+        //Sitecore.Support.77381.93260.101295.103584.106803
         if (this.isPasted) {
             if (this.fieldType == "text" || this.fieldType == "single-line text") {
                 this.fieldValue.val(text.replace(new RegExp("\\\n", 'g'), " "));
@@ -243,9 +245,14 @@
             this.isPasted = false;
         }
         else {
-            if (this.fieldType == "multi-line text") {
-                this.fieldValue.val(html.replace(/<br>/g, "\r\n"));
-            } else {
+            if (this.fieldType == "multi-line text" && $sc.browser.msie) {
+                this.fieldValue.val(html.replace(/<br>/g, "\n\n"));				
+            } 
+			
+			else if (this.fieldType == "multi-line text" ){
+				this.fieldValue.val(html.replace(/<br>/g, "\r\n"));
+			}
+			else {
                 this.fieldValue.val(html);
             }
         }
