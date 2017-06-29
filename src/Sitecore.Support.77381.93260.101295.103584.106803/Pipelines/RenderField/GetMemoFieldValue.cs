@@ -26,6 +26,7 @@ namespace Sitecore.Support.Pipelines.RenderField
 
         private static string Replace(string output, string linebreaks)
         {
+            output = output.Replace("\r\r\n", linebreaks);
             output = output.Replace("\r\n", linebreaks);
             output = output.Replace("\n\r", linebreaks);
             output = output.Replace("\n", linebreaks);
