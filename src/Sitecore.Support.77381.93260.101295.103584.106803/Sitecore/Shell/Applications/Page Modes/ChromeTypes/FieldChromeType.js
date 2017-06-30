@@ -245,12 +245,8 @@
             this.isPasted = false;
         }
         else {
-            if (this.fieldType == "multi-line text" && $sc.browser.msie) {
-                this.fieldValue.val(html.replace(/<br>/g, "\n\n"));				
-            } 
-			
-			else if (this.fieldType == "multi-line text" ){
-				this.fieldValue.val(html.replace(/<br>/g, "\r\n"));
+            if (this.fieldType == "multi-line text" ){
+				this.fieldValue.val(html.replace(/<br>/g, "\r\n").replace(/<p>/g, "\n"));
 			}
 			else {
                 this.fieldValue.val(html);
